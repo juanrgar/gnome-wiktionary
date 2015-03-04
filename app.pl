@@ -51,6 +51,14 @@ sub get_page {
   return $revs[0]->{'*'};
 }
 
+sub insert_definition {
+  my $definition = shift @_;
+  our $buffer;
+
+  my $iter = $buffer->get_end_iter;
+  $buffer->insert($iter, $definition . "\n");
+}
+
 sub parse_content {
   my $orig = shift;
   my @lines = split '\n', $orig;
@@ -63,6 +71,7 @@ sub parse_content {
     }
     if ($_ =~ /^# /) {
       push @parsed, $_;
+      insert_definition $_;
     }
   }
 
@@ -72,10 +81,18 @@ sub parse_content {
 sub on_entry_activate {
   our $entry;
   our $buffer;
-  my $content = get_page($entry->get_text());
 
+  my ($start, $end) = $buffer->get_bounds;
+  $buffer->delete($start, $end);
+
+  my $iter = $buffer->get_start_iter;
+  $buffer->insert_with_tags_by_name(
+    $iter,
+    $entry->get_text . "\n",
+    "query-title");
+
+  my $content = get_page($entry->get_text);
   $content = parse_content($content);
-  $buffer->set_text($content);
 }
 
 sub main {
@@ -84,6 +101,7 @@ sub main {
   our $entry = Gtk3::Entry->new;
   my $scroll = Gtk3::ScrolledWindow->new;
   our $buffer = Gtk3::TextBuffer->new;
+  $buffer->create_tag("query-title", "left-margin", "10", "weight", "1000", "scale", "1.6");
   my $text_view = Gtk3::TextView->new_with_buffer($buffer);
   $vbox->pack_start($entry, 0, 0, 6);
   $vbox->pack_start($scroll, 1, 1, 6);
