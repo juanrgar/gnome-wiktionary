@@ -22,18 +22,28 @@ class WikiContext (GObject.GObject, Gdict.Context):
     data = json.loads(content)
     for k in data['query']['pages'].keys():
       defs = data['query']['pages'][k]['revisions'][0]['*']
+
+      definition = Gdict.Definition()
+      definition.ref_count = 1
+      definition.word = word.capitalize()
+      definition.total = 1
+      definition.database_full = 'Wiktionary'
+
+      text = ''
+      sense_cnt = 1
       lines = defs.splitlines()
       for l in lines:
         match = re.search('^# ', l)
         if match:
-          defi = Gdict.Definition()
-          defi.ref_count = 1
-          defi.word = word
-          defi.total = len(lines)
-          defi.definition = l[2:]
-          defi.database_name = 'database'
-          self.emit("definition-found", defi)
-          print l[2:]
+          sense = str(sense_cnt) + '. ' + l[2:] + '\n'
+          text += sense
+          sense_cnt += 1
+
+      text = re.sub('\[\[', '{', text)
+      text = re.sub('\]\]', '}', text)
+      definition.definition = text
+      self.emit("definition-found", definition)
+      print definition.definition
 
     self.emit("lookup-end")
 
