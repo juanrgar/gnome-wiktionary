@@ -2,7 +2,9 @@
 
 from gi.repository import GObject
 from gi.repository import Gtk
+from gi.repository import Gio
 from gi.repository import Gdict
+import sys
 import urllib2
 import json
 import re
@@ -47,23 +49,38 @@ class WikiContext (GObject.GObject, Gdict.Context):
 
     self.emit("lookup-end")
 
-def on_entry_activate(sender):
-  word = sender.get_text()
-  print 'activate with word ' + word
-  defbox.lookup(word)
+class App (Gtk.Application):
+  defbox = None
+
+  def __init__(self):
+    Gtk.Application.__init__(self,
+        application_id="org.gnome.wiktionary",
+        flags=Gio.ApplicationFlags.FLAGS_NONE)
+
+  def do_activate(self):
+    win = Gtk.Window()
+    win.set_default_size(600, 600)
+    self.add_window(win)
+
+    vbox = Gtk.VBox()
+    entry = Gtk.Entry()
+    entry.connect("activate", self.on_entry_activate)
+    vbox.pack_start(entry, False, False, 6)
+
+    self.defbox = Gdict.Defbox()
+    ctx = WikiContext()
+    self.defbox.set_context(ctx)
+    vbox.pack_start(self.defbox, True, True, 6)
+
+    win.add(vbox)
+    win.show_all()
+
+  def on_entry_activate(self, entry):
+    word = entry.get_text()
+    print 'activate with word ' + word
+    self.defbox.lookup(word)
+
 
 if __name__ == "__main__":
-  win = Gtk.Window()
-  win.set_default_size(600, 600)
-  vbox = Gtk.VBox()
-  entry = Gtk.Entry()
-  entry.connect("activate", on_entry_activate)
-  vbox.pack_start(entry, False, False, 6)
-  defbox = Gdict.Defbox()
-  ctx = WikiContext()
-  defbox.set_context(ctx)
-  vbox.pack_start(defbox, True, True, 6)
-  win.add(vbox)
-  win.connect("delete-event", Gtk.main_quit)
-  win.show_all()
-  Gtk.main()
+  app = App()
+  app.run(sys.argv)
